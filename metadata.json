@@ -1,0 +1,5 @@
+{
+  "name": "kunj",
+  "description": "A lightweight image editor allowing users to upload photos, annotate with freehand drawing tools, and export the modified images.",
+  "requestFramePermissions": []
+}
