@@ -75,7 +75,7 @@ const DesignerPage: React.FC<DesignerPageProps> = ({ onLogout }) => {
         };
     };
 
-    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const handleStart = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
         if (!currentTool || !selectedCollection) return;
 
         const coords = getRelativeCoords(e);
@@ -116,13 +116,13 @@ const DesignerPage: React.FC<DesignerPageProps> = ({ onLogout }) => {
         }
     };
 
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const handleMove = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
         if (!isDrawing || currentTool !== 'pen') return;
         const coords = getRelativeCoords(e);
         setCurrentPath(prev => [...prev, coords]);
     };
 
-    const handleMouseUp = () => {
+    const handleEnd = () => {
         if (isDrawing && currentTool === 'pen') {
             setIsDrawing(false);
             if (currentPath.length > 1) {
@@ -293,11 +293,17 @@ const DesignerPage: React.FC<DesignerPageProps> = ({ onLogout }) => {
                                 <div
                                     ref={imageRef}
                                     className="relative bg-white rounded-lg shadow-lg overflow-hidden select-none"
-                                    style={{ cursor: currentTool === 'eraser' ? 'not-allowed' : 'crosshair' }}
-                                    onMouseDown={handleMouseDown}
-                                    onMouseMove={handleMouseMove}
-                                    onMouseUp={handleMouseUp}
-                                    onMouseLeave={handleMouseUp}
+                                    style={{ 
+                                        cursor: currentTool === 'eraser' ? 'not-allowed' : 'crosshair',
+                                        touchAction: 'none'
+                                    }}
+                                    onMouseDown={handleStart}
+                                    onMouseMove={handleMove}
+                                    onMouseUp={handleEnd}
+                                    onMouseLeave={handleEnd}
+                                    onTouchStart={handleStart}
+                                    onTouchMove={handleMove}
+                                    onTouchEnd={handleEnd}
                                 >
                                     <img
                                         src={selectedCollection.image_url}
