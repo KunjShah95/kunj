@@ -120,23 +120,26 @@ const WaterPage: React.FC<WaterPageProps> = ({ onLogout }) => {
         redraw();
     }, [strokes, currentStroke, backgroundImage]);
 
-    const getPoint = (e: React.MouseEvent | React.TouchEvent): Point => {
+    const getPoint = (e: React.PointerEvent<HTMLCanvasElement>): Point => {
         const canvas = canvasRef.current;
         if (!canvas) return { x: 0, y: 0 };
 
         const rect = canvas.getBoundingClientRect();
-        const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-
         return {
-            x: (clientX - rect.left) / rect.width,
-            y: (clientY - rect.top) / rect.height
+            x: (e.clientX - rect.left) / rect.width,
+            y: (e.clientY - rect.top) / rect.height
         };
     };
 
-    const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
         if (tool === ToolType.MOVE) return;
+        
+        // Only draw with primary button (left mouse) or pen/touch contact
+        if (e.buttons !== 1 && e.pointerType === 'mouse') return;
+
+        e.currentTarget.setPointerCapture(e.pointerId);
         setIsDrawing(true);
+        
         const point = getPoint(e);
         setCurrentStroke({
             points: [point],
@@ -146,8 +149,11 @@ const WaterPage: React.FC<WaterPageProps> = ({ onLogout }) => {
         });
     };
 
-    const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
         if (!isDrawing || !currentStroke) return;
+        
+        // If using pen, we could use pressure here: e.pressure
+        
         const point = getPoint(e);
         setCurrentStroke((prev: Stroke | null) => prev ? {
             ...prev,
@@ -155,7 +161,8 @@ const WaterPage: React.FC<WaterPageProps> = ({ onLogout }) => {
         } : null);
     };
 
-    const stopDrawing = () => {
+    const stopDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
+        e.currentTarget.releasePointerCapture(e.pointerId);
         if (isDrawing && currentStroke) {
             setStrokes(prev => [...prev, currentStroke]);
             setCurrentStroke(null);
@@ -231,18 +238,21 @@ const WaterPage: React.FC<WaterPageProps> = ({ onLogout }) => {
     };
 
     return (
-        <div className="flex h-screen flex-col bg-gray-50">
+        <div className="flex h-[100dvh] flex-col bg-gray-50">
             {/* Toolbar */}
-            <div className="flex items-center justify-between bg-white p-4 shadow-sm">
-                <div className="flex items-center gap-4">
-                    <h1 className="text-xl font-bold">
-                        Designer: {user.email}
-                        {user.role && <span className="ml-2 text-sm text-blue-600 font-medium">({user.role})</span>}
+            <div className="flex flex-col md:flex-row items-center justify-between bg-white p-2 md:p-4 shadow-sm gap-2 md:gap-4 z-10">
+                <div className="flex flex-wrap items-center gap-2 md:gap-4 w-full md:w-auto justify-between md:justify-start">
+                    <h1 className="text-sm md:text-xl font-bold truncate max-w-[150px] md:max-w-none">
+                        {user.email?.split('@')[0]}
+                        {user.role && <span className="ml-1 md:ml-2 text-xs md:text-sm text-blue-600 font-medium">({user.role})</span>}
                     </h1>
-                    <div className="flex items-center gap-2 border-l pl-4">
+                    
+                    {/* Mobile-optimized tool group */}
+                    <div className="flex items-center gap-1 md:gap-2 border-l pl-2 md:pl-4 overflow-x-auto no-scrollbar">
                         <Button
                             variant={tool === ToolType.PEN ? 'default' : 'ghost'}
                             size="icon"
+                            className="h-8 w-8 md:h-10 md:w-10"
                             onClick={() => setTool(ToolType.PEN)}
                         >
                             <Pen className="h-4 w-4" />
@@ -250,6 +260,7 @@ const WaterPage: React.FC<WaterPageProps> = ({ onLogout }) => {
                         <Button
                             variant={tool === ToolType.ERASER ? 'default' : 'ghost'}
                             size="icon"
+                            className="h-8 w-8 md:h-10 md:w-10"
                             onClick={() => setTool(ToolType.ERASER)}
                         >
                             <Eraser className="h-4 w-4" />
@@ -257,6 +268,7 @@ const WaterPage: React.FC<WaterPageProps> = ({ onLogout }) => {
                         <Button
                             variant={tool === ToolType.MOVE ? 'default' : 'ghost'}
                             size="icon"
+                            className="h-8 w-8 md:h-10 md:w-10"
                             onClick={() => setTool(ToolType.MOVE)}
                         >
                             <Move className="h-4 w-4" />
@@ -272,6 +284,7 @@ const WaterPage: React.FC<WaterPageProps> = ({ onLogout }) => {
                             <Button
                                 variant="ghost"
                                 size="icon"
+                                className="h-8 w-8 md:h-10 md:w-10"
                                 onClick={() => fileInputRef.current?.click()}
                                 title="Add Image"
                             >
@@ -279,7 +292,10 @@ const WaterPage: React.FC<WaterPageProps> = ({ onLogout }) => {
                             </Button>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 border-l pl-4">
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-between md:justify-end">
+                    <div className="flex items-center gap-2 border-r pr-2 md:border-l md:border-r-0 md:pl-4 md:pr-0">
                         <input
                             type="color"
                             value={color}
@@ -292,42 +308,39 @@ const WaterPage: React.FC<WaterPageProps> = ({ onLogout }) => {
                             max="20"
                             value={lineWidth}
                             onChange={(e) => setLineWidth(parseInt(e.target.value))}
-                            className="w-24"
+                            className="w-20 md:w-24"
                         />
                     </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" onClick={clearCanvas} title="Clear Canvas">
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
-                    <Button variant="default" onClick={() => setShowSaveDialog(true)}>
-                        <Save className="mr-2 h-4 w-4" />
-                        Save Work
-                    </Button>
-                    <Button variant="outline" onClick={exportPDF}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Export PDF
-                    </Button>
-                    <Button variant="ghost" onClick={onLogout}>
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Logout
-                    </Button>
+
+                    <div className="flex items-center gap-1 md:gap-2">
+                        <Button variant="outline" size="icon" onClick={clearCanvas} title="Clear Canvas" className="h-8 w-8 md:h-10 md:w-10">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <Button variant="default" size="sm" onClick={() => setShowSaveDialog(true)} className="h-8 md:h-10">
+                            <Save className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                            <span className="hidden sm:inline">Save</span>
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={exportPDF} className="h-8 md:h-10">
+                            <Download className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                            <span className="hidden sm:inline">Export</span>
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={onLogout} className="h-8 w-8 md:h-10 md:w-10">
+                            <LogOut className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
             </div>
 
             {/* Canvas Area */}
-            <div className="flex-1 overflow-hidden p-4">
-                <div className="h-full w-full rounded-lg bg-white shadow-lg ring-1 ring-gray-200">
+            <div className="flex-1 overflow-hidden p-2 md:p-4 relative">
+                <div className="h-full w-full rounded-lg bg-white shadow-lg ring-1 ring-gray-200 overflow-hidden">
                     <canvas
                         ref={canvasRef}
-                        className="h-full w-full touch-none cursor-crosshair"
-                        onMouseDown={startDrawing}
-                        onMouseMove={draw}
-                        onMouseUp={stopDrawing}
-                        onMouseLeave={stopDrawing}
-                        onTouchStart={startDrawing}
-                        onTouchMove={draw}
-                        onTouchEnd={stopDrawing}
+                        className="h-full w-full touch-none cursor-crosshair block"
+                        onPointerDown={startDrawing}
+                        onPointerMove={draw}
+                        onPointerUp={stopDrawing}
+                        onPointerLeave={stopDrawing}
                     />
                 </div>
             </div>

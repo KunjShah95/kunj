@@ -328,25 +328,25 @@ const AdminCollectionsPage: React.FC<AdminCollectionsPageProps> = ({ user, onLog
     return (
         <div className="min-h-screen bg-gray-50">
             <header className="bg-white shadow-sm border-b">
-                <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+                <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
                         <p className="text-sm text-gray-600">{user?.email} {isAdmin && <span className="text-green-600 font-medium">(Admin)</span>}</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2 w-full md:w-auto">
                         <RoleBased allowedRoles="water">
-                            <Button variant="outline" onClick={() => navigate('/water')}>
+                            <Button variant="outline" onClick={() => navigate('/water')} className="flex-1 md:flex-none">
                                 <Palette className="mr-2 h-4 w-4" />
                                 Designer View
                             </Button>
                         </RoleBased>
                         <RoleBased allowedRoles="admin">
-                            <Button onClick={() => setShowUploadDialog(true)}>
+                            <Button onClick={() => setShowUploadDialog(true)} className="flex-1 md:flex-none">
                                 <Upload className="mr-2 h-4 w-4" />
                                 Upload Collection
                             </Button>
                         </RoleBased>
-                        <Button variant="ghost" onClick={onLogout}>
+                        <Button variant="ghost" onClick={onLogout} className="flex-1 md:flex-none">
                             <LogOut className="mr-2 h-4 w-4" />
                             Logout
                         </Button>
