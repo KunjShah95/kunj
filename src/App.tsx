@@ -1,152 +1,113 @@
-
-import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import LandingPage from './pages/LandingPage';
-import WaterPage from './pages/WaterPage';
-import EnhancedAdminPage from './pages/EnhancedAdminPage';
-import { supabase } from './lib/supabase';
+import DesignerPage from './pages/DesignerPage';
+import AdminCollectionsPage from './pages/AdminCollectionsPage';
+import PermissionDeniedPage from './pages/PermissionDeniedPage';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
-function App() {
-  const [loading, setLoading] = useState(true);
-  const [authState, setAuthState] = useState<{
-    isAuthenticated: boolean;
-    role: 'admin' | 'water' | null;
-    userId: string;
-  }>({
-    isAuthenticated: false,
-    role: null,
-    userId: ''
-  });
-
-  useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        const role = session.user.user_metadata.role as 'admin' | 'water' || 'water';
-        setAuthState({
-          isAuthenticated: true,
-          role: role,
-          userId: session.user.email || session.user.id
-        });
-      }
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        const role = session.user.user_metadata.role as 'admin' | 'water' || 'water';
-        setAuthState({
-          isAuthenticated: true,
-          role: role,
-          userId: session.user.email || session.user.id
-        });
-      } else {
-        setAuthState({
-          isAuthenticated: false,
-          role: null,
-          userId: ''
-        });
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const handleLogin = (role: 'admin' | 'water', userId: string) => {
-    setAuthState({
-      isAuthenticated: true,
-      role,
-      userId
-    });
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setAuthState({
-      isAuthenticated: false,
-      role: null,
-      userId: ''
-    });
-  };
+function AppRoutes() {
+  const { user, loading, signOut } = useAuth();
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
+  const isAuthenticated = !!user;
+  const userRole = user?.role;
+
   return (
-    <Router>
-      <Routes>
-        {/* Landing Page */}
-        <Route path="/" element={
-          authState.isAuthenticated ? (
-            <Navigate to={authState.role === 'admin' ? '/admin' : '/water'} />
+    <Routes>
+      {/* Landing Page */}
+      <Route path="/" element={
+        isAuthenticated ? (
+          <Navigate to={userRole === 'admin' ? '/admin' : '/water'} />
+        ) : (
+          <LandingPage />
+        )
+      } />
+
+      {/* Register Page */}
+      <Route path="/register" element={
+        isAuthenticated ? (
+          <Navigate to={userRole === 'admin' ? '/admin' : '/water'} />
+        ) : (
+          <RegisterPage />
+        )
+      } />
+
+      {/* Login Page */}
+      <Route
+        path="/login"
+        element={
+          isAuthenticated ? (
+            <Navigate to={userRole === 'admin' ? '/admin' : '/water'} />
           ) : (
-            <LandingPage />
+            <LoginPage />
           )
-        } />
+        }
+      />
 
-        {/* Register Page */}
-        <Route path="/register" element={
-          authState.isAuthenticated ? (
-            <Navigate to={authState.role === 'admin' ? '/admin' : '/water'} />
+      {/* Water (Designer) Page */}
+      <Route
+        path="/water"
+        element={
+          isAuthenticated && userRole === 'water' ? (
+            <DesignerPage onLogout={signOut} />
           ) : (
-            <RegisterPage onLogin={handleLogin} />
+            isAuthenticated && userRole === 'admin' ? (
+              <Navigate to="/permission-denied" />
+            ) : (
+              <Navigate to="/login" />
+            )
           )
-        } />
+        }
+      />
 
-        {/* Login Page */}
-        <Route
-          path="/login"
-          element={
-            authState.isAuthenticated ? (
-              <Navigate to={authState.role === 'admin' ? '/admin' : '/water'} />
+      {/* Admin Page */}
+      <Route
+        path="/admin"
+        element={
+          isAuthenticated && userRole === 'admin' ? (
+            <AdminCollectionsPage user={user!} onLogout={signOut} />
+          ) : (
+            isAuthenticated && userRole === 'water' ? (
+              <Navigate to="/permission-denied" />
             ) : (
-              <LoginPage onLogin={handleLogin} />
+              <Navigate to="/login" />
             )
-          }
-        />
+          )
+        }
+      />
 
-        {/* Water (Designer) Page */}
-        <Route
-          path="/water"
-          element={
-            authState.isAuthenticated && authState.role === 'water' ? (
-              <WaterPage userId={authState.userId} onLogout={handleLogout} />
-            ) : (
-              authState.isAuthenticated && authState.role === 'admin' ? (
-                <Navigate to="/admin" />
-              ) : (
-                <Navigate to="/login" />
-              )
-            )
-          }
-        />
+      {/* Permission Denied Page */}
+      <Route
+        path="/permission-denied"
+        element={
+          isAuthenticated ? (
+            <PermissionDeniedPage />
+          ) : (
+            <Navigate to="/login" />
+          )
+        }
+      />
 
-        {/* Admin Page */}
-        <Route
-          path="/admin"
-          element={
-            authState.isAuthenticated && authState.role === 'admin' ? (
-              <EnhancedAdminPage adminId={authState.userId} onLogout={handleLogout} />
-            ) : (
-              authState.isAuthenticated && authState.role === 'water' ? (
-                <Navigate to="/water" />
-              ) : (
-                <Navigate to="/login" />
-              )
-            )
-          }
-        />
+      {/* Catch all */}
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
+  );
+}
 
-        {/* Catch all */}
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </Router>
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <AppRoutes />
+      </Router>
+    </AuthProvider>
   );
 }
 
 export default App;
+

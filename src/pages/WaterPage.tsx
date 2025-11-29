@@ -1,17 +1,19 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Eraser, Pen, Move, Download, LogOut, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Eraser, Pen, Move, Download, LogOut, Trash2, Image as ImageIcon, Save } from 'lucide-react';
 import { jsPDF } from 'jspdf';
-import { supabase } from '@/supabaseClient';
+
 import { Stroke, ToolType, Point } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface WaterPageProps {
-    userId: string;
     onLogout: () => void;
 }
 
-const WaterPage: React.FC<WaterPageProps> = ({ userId, onLogout }) => {
+const WaterPage: React.FC<WaterPageProps> = ({ onLogout }) => {
+    const { user } = useAuth();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
@@ -21,6 +23,14 @@ const WaterPage: React.FC<WaterPageProps> = ({ userId, onLogout }) => {
     const [strokes, setStrokes] = useState<Stroke[]>([]);
     const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
     const [backgroundImage, setBackgroundImage] = useState<HTMLImageElement | null>(null);
+    const [taskName, setTaskName] = useState('');
+    const [taskDescription, setTaskDescription] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [showSaveDialog, setShowSaveDialog] = useState(false);
+
+    if (!user) {
+        return <div>Loading...</div>;
+    }
 
     // Initialize canvas
     useEffect(() => {
@@ -127,7 +137,7 @@ const WaterPage: React.FC<WaterPageProps> = ({ userId, onLogout }) => {
     const draw = (e: React.MouseEvent | React.TouchEvent) => {
         if (!isDrawing || !currentStroke) return;
         const point = getPoint(e);
-        setCurrentStroke(prev => prev ? {
+        setCurrentStroke((prev: Stroke | null) => prev ? {
             ...prev,
             points: [...prev.points, point]
         } : null);
@@ -137,15 +147,40 @@ const WaterPage: React.FC<WaterPageProps> = ({ userId, onLogout }) => {
         if (isDrawing && currentStroke) {
             setStrokes(prev => [...prev, currentStroke]);
             setCurrentStroke(null);
-            // Save to Supabase here if needed
-            saveToSupabase([...strokes, currentStroke]);
         }
         setIsDrawing(false);
     };
 
-    const saveToSupabase = async (newStrokes: Stroke[]) => {
-        // Placeholder for Supabase save
-        console.log('Saving to Supabase', newStrokes);
+    const saveWork = async () => {
+        if (!taskName.trim()) {
+            alert('Please enter a task name');
+            return;
+        }
+
+        setSaving(true);
+        try {
+            const canvas = canvasRef.current;
+            if (!canvas) throw new Error('Canvas not found');
+
+            // Simulate save delay
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            console.log('Mock saving work:', {
+                taskName,
+                taskDescription,
+                strokesCount: strokes.length
+            });
+
+            alert('Work saved successfully! (Mock)');
+            setTaskName('');
+            setTaskDescription('');
+            setShowSaveDialog(false);
+        } catch (error: any) {
+            console.error('Error saving work:', error);
+            alert('Failed to save work: ' + error.message);
+        } finally {
+            setSaving(false);
+        }
     };
 
     const clearCanvas = () => {
@@ -188,7 +223,10 @@ const WaterPage: React.FC<WaterPageProps> = ({ userId, onLogout }) => {
             {/* Toolbar */}
             <div className="flex items-center justify-between bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-4">
-                    <h1 className="text-xl font-bold">Designer: {userId}</h1>
+                    <h1 className="text-xl font-bold">
+                        Designer: {user.email}
+                        {user.role && <span className="ml-2 text-sm text-blue-600 font-medium">({user.role})</span>}
+                    </h1>
                     <div className="flex items-center gap-2 border-l pl-4">
                         <Button
                             variant={tool === ToolType.PEN ? 'default' : 'ghost'}
@@ -250,6 +288,10 @@ const WaterPage: React.FC<WaterPageProps> = ({ userId, onLogout }) => {
                     <Button variant="outline" size="icon" onClick={clearCanvas} title="Clear Canvas">
                         <Trash2 className="h-4 w-4" />
                     </Button>
+                    <Button variant="default" onClick={() => setShowSaveDialog(true)}>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save Work
+                    </Button>
                     <Button variant="outline" onClick={exportPDF}>
                         <Download className="mr-2 h-4 w-4" />
                         Export PDF
@@ -277,6 +319,56 @@ const WaterPage: React.FC<WaterPageProps> = ({ userId, onLogout }) => {
                     />
                 </div>
             </div>
+
+            {/* Save Dialog */}
+            {showSaveDialog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+                        <h2 className="text-xl font-bold mb-4">Save Your Work</h2>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Task Name <span className="text-red-500">*</span>
+                                </label>
+                                <Input
+                                    placeholder="e.g., Logo Design"
+                                    value={taskName}
+                                    onChange={(e) => setTaskName(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Description (Optional)
+                                </label>
+                                <textarea
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    rows={3}
+                                    placeholder="Add any notes about this work..."
+                                    value={taskDescription}
+                                    onChange={(e) => setTaskDescription(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                        <div className="flex gap-3 mt-6">
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => setShowSaveDialog(false)}
+                                disabled={saving}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                className="flex-1"
+                                onClick={saveWork}
+                                disabled={saving}
+                            >
+                                {saving ? 'Saving...' : 'Save'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

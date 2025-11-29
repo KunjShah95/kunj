@@ -2,14 +2,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Lock, Mail, ArrowRight } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 
-interface RegisterPageProps {
-    onLogin: (role: 'admin' | 'water', userId: string) => void;
-}
+import { useAuth } from '@/contexts/AuthContext';
 
-const RegisterPage: React.FC<RegisterPageProps> = ({ onLogin }) => {
+const RegisterPage: React.FC = () => {
     const navigate = useNavigate();
+    const { signIn } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
@@ -23,36 +21,9 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onLogin }) => {
         setError('');
 
         try {
-            // 1. Sign up with Supabase Auth
-            const { data: authData, error: authError } = await supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: {
-                        full_name: fullName,
-                        role: role,
-                    },
-                },
-            });
-
-            if (authError) throw authError;
-
-            if (authData.user) {
-                // 2. Create a profile record (optional, depending on your DB schema)
-                // For now, we'll just assume auth metadata is enough or handle it later
-
-                // Auto-login logic
-                // Pass the role and email (or ID) to the parent App component
-                onLogin(role, authData.user.email || authData.user.id);
-
-                alert('Registration successful!');
-                // Redirect based on role
-                if (role === 'admin') {
-                    navigate('/admin');
-                } else {
-                    navigate('/water');
-                }
-            }
+            // Mock registration - just sign in directly
+            await signIn(email, role);
+            // Navigation will be handled by App.tsx based on user role
         } catch (err: any) {
             console.error('Registration error:', err);
             setError(err.message || 'An error occurred during registration.');

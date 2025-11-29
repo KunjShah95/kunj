@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+
 import { Link } from 'react-router-dom';
 import { Plus, Eye } from 'lucide-react';
 
@@ -14,13 +14,26 @@ const Dashboard = () => {
 
     const fetchTasks = async () => {
         try {
-            const { data, error } = await supabase
-                .from('tasks')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            setTasks(data || []);
+            // Mock data
+            const mockTasks = [
+                {
+                    id: '1',
+                    task_name: 'Mock Task 1',
+                    category: 'Rings',
+                    designer_id: 'designer1',
+                    status: 'pending',
+                    created_at: new Date().toISOString()
+                },
+                {
+                    id: '2',
+                    task_name: 'Mock Task 2',
+                    category: 'Necklace',
+                    designer_id: 'designer1',
+                    status: 'completed',
+                    created_at: new Date().toISOString()
+                }
+            ];
+            setTasks(mockTasks);
         } catch (error) {
             console.error('Error fetching tasks:', error);
         } finally {
@@ -64,8 +77,8 @@ const Dashboard = () => {
                                     <td className="p-4 text-left border-b border-gray-100 text-gray-600">{task.designer_id}</td>
                                     <td className="p-4 text-left border-b border-gray-100">
                                         <span className={`px-2 py-1 rounded text-xs font-semibold uppercase ${task.status === 'completed'
-                                                ? 'bg-green-100 text-green-800'
-                                                : 'bg-yellow-100 text-yellow-800'
+                                            ? 'bg-green-100 text-green-800'
+                                            : 'bg-yellow-100 text-yellow-800'
                                             }`}>
                                             {task.status}
                                         </span>

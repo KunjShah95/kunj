@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '../components/ui/button';
+import { Button } from '@/components/ui/button';
 import { LogOut, Search, Filter, Download, Eye } from 'lucide-react';
-import { Input } from '../components/ui/input';
-import { supabase } from '@/supabaseClient';
-import { UserDrawingMap } from '@/types';
+import { Input } from '@/components/ui/input';
+
 
 interface EnhancedAdminPageProps {
     adminId: string;
@@ -18,13 +17,24 @@ const EnhancedAdminPage: React.FC<EnhancedAdminPageProps> = ({ adminId, onLogout
     useEffect(() => {
         const fetchDrawings = async () => {
             try {
-                const { data, error } = await supabase
-                    .from('uploads')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-
-                if (error) throw error;
-                setDrawings(data || []);
+                // Mock data
+                const mockDrawings = [
+                    {
+                        id: '1',
+                        title: 'Mock Drawing 1',
+                        uploaded_by: 'user1@example.com',
+                        created_at: new Date().toISOString(),
+                        image_url: 'https://via.placeholder.com/400x300'
+                    },
+                    {
+                        id: '2',
+                        title: 'Mock Drawing 2',
+                        uploaded_by: 'user2@example.com',
+                        created_at: new Date().toISOString(),
+                        image_url: 'https://via.placeholder.com/400x300'
+                    }
+                ];
+                setDrawings(mockDrawings);
             } catch (error) {
                 console.error('Error fetching uploads:', error);
             } finally {
@@ -35,8 +45,8 @@ const EnhancedAdminPage: React.FC<EnhancedAdminPageProps> = ({ adminId, onLogout
     }, []);
 
     const filteredDrawings = drawings.filter(drawing =>
-        drawing.designer_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        drawing.task_name?.toLowerCase().includes(searchTerm.toLowerCase())
+        drawing.uploaded_by?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        drawing.title?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -91,8 +101,8 @@ const EnhancedAdminPage: React.FC<EnhancedAdminPageProps> = ({ adminId, onLogout
                             <div key={drawing.id} className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
                                 <div className="mb-4 flex items-center justify-between">
                                     <div>
-                                        <h3 className="font-semibold text-gray-900">{drawing.designer_id}</h3>
-                                        <p className="text-xs text-gray-500">{drawing.task_name}</p>
+                                        <h3 className="font-semibold text-gray-900">{drawing.uploaded_by}</h3>
+                                        <p className="text-xs text-gray-500">{drawing.title}</p>
                                     </div>
                                     <span className="text-sm text-gray-500">
                                         {new Date(drawing.created_at).toLocaleDateString()}

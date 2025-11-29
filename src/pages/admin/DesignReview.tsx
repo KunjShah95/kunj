@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+
 import { generatePDF } from '../../lib/pdfGenerator';
 import { Download } from 'lucide-react';
 
@@ -14,13 +14,22 @@ const DesignReview = () => {
 
     const fetchUploads = async () => {
         try {
-            const { data, error } = await supabase
-                .from('design_uploads')
-                .select('*')
-                .order('uploaded_at', { ascending: false });
-
-            if (error) throw error;
-            setUploads(data || []);
+            // Mock data
+            const mockUploads = [
+                {
+                    id: '1',
+                    design_url: 'https://via.placeholder.com/400x300',
+                    status: 'pending',
+                    uploaded_at: new Date().toISOString()
+                },
+                {
+                    id: '2',
+                    design_url: 'https://via.placeholder.com/400x300',
+                    status: 'approved',
+                    uploaded_at: new Date().toISOString()
+                }
+            ];
+            setUploads(mockUploads);
         } catch (error) {
             console.error('Error fetching uploads:', error);
         } finally {

@@ -1,32 +1,33 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { User, Lock } from 'lucide-react';
+import { User, Shield } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { AppRole } from '@/lib/roleUtils';
 
-// Simple Card components since I didn't implement them yet
 const SimpleCard = ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div className={`bg-white rounded-lg shadow-md ${className}`}>{children}</div>
 );
 
-interface LoginPageProps {
-    onLogin: (role: 'admin' | 'water', userId: string) => void;
-}
+const LoginPage: React.FC = () => {
+    const navigate = useNavigate();
+    const { signIn } = useAuth();
+    const [email, setEmail] = useState('');
+    const [role, setRole] = useState<AppRole>('water');
+    const [loading, setLoading] = useState(false);
 
-const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
-    const [userId, setUserId] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
+        setLoading(true);
 
-        if (userId === 'admin' && password === 'admin123') {
-            onLogin('admin', userId);
-        } else if (userId.startsWith('water') && password === 'water123') {
-            onLogin('water', userId);
-        } else {
-            setError('Invalid credentials');
+        try {
+            await signIn(email, role);
+            // Navigation is handled by App.tsx
+        } catch (err) {
+            console.error('Login error:', err);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -35,38 +36,54 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             <SimpleCard className="w-full max-w-md p-6">
                 <div className="mb-6 text-center">
                     <h1 className="text-2xl font-bold text-gray-900">Image Ink Studio</h1>
-                    <p className="text-gray-500">Login to your account</p>
+                    <p className="text-gray-500">Enter your details to continue</p>
                 </div>
                 <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">User ID</label>
+                        <label className="text-sm font-medium text-gray-700">Email / Username</label>
                         <div className="relative">
                             <User className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                             <Input
                                 type="text"
-                                placeholder="Enter User ID"
+                                placeholder="Enter your name or email"
                                 className="pl-10"
-                                value={userId}
-                                onChange={(e) => setUserId(e.target.value)}
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
                             />
                         </div>
                     </div>
+
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Password</label>
-                        <div className="relative">
-                            <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                            <Input
-                                type="password"
-                                placeholder="Enter Password"
-                                className="pl-10"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                            />
+                        <label className="text-sm font-medium text-gray-700">Select Role</label>
+                        <div className="grid grid-cols-2 gap-4">
+                            <button
+                                type="button"
+                                onClick={() => setRole('water')}
+                                className={`p-4 rounded-lg border-2 flex flex-col items-center gap-2 transition-colors ${role === 'water'
+                                        ? 'border-blue-600 bg-blue-50 text-blue-700'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                            >
+                                <User className="h-6 w-6" />
+                                <span className="font-medium">Designer</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setRole('admin')}
+                                className={`p-4 rounded-lg border-2 flex flex-col items-center gap-2 transition-colors ${role === 'admin'
+                                        ? 'border-green-600 bg-green-50 text-green-700'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                            >
+                                <Shield className="h-6 w-6" />
+                                <span className="font-medium">Admin</span>
+                            </button>
                         </div>
                     </div>
-                    {error && <p className="text-red-500 text-sm">{error}</p>}
-                    <Button type="submit" className="w-full">
-                        Login
+
+                    <Button type="submit" className="w-full" disabled={loading}>
+                        {loading ? 'Signing in...' : 'Continue'}
                     </Button>
                 </form>
             </SimpleCard>
