@@ -28,36 +28,19 @@ const WaterPage: React.FC<WaterPageProps> = ({ onLogout }) => {
     const [saving, setSaving] = useState(false);
     const [showSaveDialog, setShowSaveDialog] = useState(false);
 
+    // Refs for accessing latest state in event listeners (like resize)
+    const strokesRef = useRef(strokes);
+    const currentStrokeRef = useRef(currentStroke);
+    const backgroundImageRef = useRef(backgroundImage);
+
+    // Update refs on every render
+    strokesRef.current = strokes;
+    currentStrokeRef.current = currentStroke;
+    backgroundImageRef.current = backgroundImage;
+
     if (!user) {
         return <div>Loading...</div>;
     }
-
-    // Initialize canvas
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        // Set canvas size to match window
-        const resizeCanvas = () => {
-            const parent = canvas.parentElement;
-            if (parent) {
-                canvas.width = parent.clientWidth;
-                canvas.height = parent.clientHeight;
-                redraw();
-            }
-        };
-
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        return () => window.removeEventListener('resize', resizeCanvas);
-    }, []);
 
     // Redraw function
     const redraw = () => {
@@ -66,19 +49,27 @@ const WaterPage: React.FC<WaterPageProps> = ({ onLogout }) => {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
+        // Ensure context properties are set (they reset on resize)
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+        const bg = backgroundImageRef.current;
+        const currentStrokes = strokesRef.current;
+        const currStroke = currentStrokeRef.current;
+
         // Draw background image if exists
-        if (backgroundImage) {
+        if (bg) {
             // Calculate aspect ratio to fit image within canvas while maintaining proportions
             const scale = Math.min(
-                canvas.width / backgroundImage.width,
-                canvas.height / backgroundImage.height
+                canvas.width / bg.width,
+                canvas.height / bg.height
             );
-            const x = (canvas.width / 2) - (backgroundImage.width / 2) * scale;
-            const y = (canvas.height / 2) - (backgroundImage.height / 2) * scale;
+            const x = (canvas.width / 2) - (bg.width / 2) * scale;
+            const y = (canvas.height / 2) - (bg.height / 2) * scale;
 
-            ctx.drawImage(backgroundImage, x, y, backgroundImage.width * scale, backgroundImage.height * scale);
+            ctx.drawImage(bg, x, y, bg.width * scale, bg.height * scale);
         }
 
         const drawStroke = (stroke: Stroke) => {
@@ -100,10 +91,31 @@ const WaterPage: React.FC<WaterPageProps> = ({ onLogout }) => {
             ctx.globalCompositeOperation = 'source-over';
         };
 
-        strokes.forEach(drawStroke);
-        if (currentStroke) drawStroke(currentStroke);
+        currentStrokes.forEach(drawStroke);
+        if (currStroke) drawStroke(currStroke);
     };
 
+    // Initialize canvas and handle resize
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const resizeCanvas = () => {
+            const parent = canvas.parentElement;
+            if (parent) {
+                canvas.width = parent.clientWidth;
+                canvas.height = parent.clientHeight;
+                redraw();
+            }
+        };
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        return () => window.removeEventListener('resize', resizeCanvas);
+    }, []);
+
+    // Trigger redraw when state changes
     useEffect(() => {
         redraw();
     }, [strokes, currentStroke, backgroundImage]);
@@ -117,8 +129,8 @@ const WaterPage: React.FC<WaterPageProps> = ({ onLogout }) => {
         const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
 
         return {
-            x: (clientX - rect.left) / canvas.width,
-            y: (clientY - rect.top) / canvas.height
+            x: (clientX - rect.left) / rect.width,
+            y: (clientY - rect.top) / rect.height
         };
     };
 
