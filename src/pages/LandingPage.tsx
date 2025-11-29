@@ -277,9 +277,9 @@ const LandingPage = () => {
                         <Link to="/register" className="px-8 py-4 bg-white text-blue-600 font-bold rounded-full hover:bg-blue-50 transition-colors shadow-lg">
                             Get Started for Free
                         </Link>
-                        <Link to="/contact" className="px-8 py-4 bg-blue-700 text-white font-bold rounded-full hover:bg-blue-800 transition-colors border border-blue-500">
+                        <a href="mailto:hello@imageink.com" className="px-8 py-4 bg-blue-700 text-white font-bold rounded-full hover:bg-blue-800 transition-colors border border-blue-500">
                             Contact Sales
-                        </Link>
+                        </a>
                     </div>
                 </div>
             </section>
